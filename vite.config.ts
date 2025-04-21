@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+	server: {
+		allowedHosts: [
+			'thekarigarstop.vikas.rocks',
+			'localhost',
+		],
+	},
   plugins: [react()],
   build: {
     outDir: 'dist',

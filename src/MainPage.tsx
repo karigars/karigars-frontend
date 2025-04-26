@@ -1,5 +1,4 @@
-{/* Previous MainPage.tsx content up until the grid */}
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { 
   FaSearch, 
@@ -17,7 +16,12 @@ import {
   FaQuestionCircle,
   FaBook,
   FaHeadset,
-  FaInfoCircle
+  FaInfoCircle,
+  FaPray,
+  FaUtensils,
+  FaPalette,
+  FaCamera,
+  FaUpload
 } from 'react-icons/fa';
 import BookingPage from './BookingPage';
 import BookingHistoryPage from './BookingHistoryPage';
@@ -25,19 +29,39 @@ import BookingHistoryPage from './BookingHistoryPage';
 interface Service {
   id: string;
   name: string;
-  category: 'event' | 'daily';
+  category: 'event' | 'daily' | 'religious';
   description: string;
   image: string;
   price: string;
   rating: number;
   location: string;
   availability: string;
+  laborCharges?: boolean;
+  options?: {
+    decoration?: {
+      available: boolean;
+      price: string;
+    };
+    food?: {
+      available: boolean;
+      price: string;
+    };
+    fullArrangement?: {
+      available: boolean;
+      price: string;
+    };
+  };
 }
 
 interface UserProfile {
   fullName: string;
   email: string;
   mobile: string;
+  profileImage?: string;
+}
+
+interface MainPageProps {
+  initialUserProfile: UserProfile | null;
 }
 
 interface Notification {
@@ -48,10 +72,6 @@ interface Notification {
   read: boolean;
 }
 
-interface MainPageProps {
-  initialUserProfile: UserProfile | null;
-}
-
 interface HelpTopic {
   id: string;
   title: string;
@@ -60,7 +80,7 @@ interface HelpTopic {
 }
 
 export default function MainPage({ initialUserProfile }: MainPageProps) {
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'event' | 'daily'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'event' | 'daily' | 'religious'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -69,6 +89,7 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(initialUserProfile);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedHelpTopic, setSelectedHelpTopic] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Help topics data
   const helpTopics: HelpTopic[] = [
@@ -151,7 +172,6 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
     };
   }, []);
 
-  // Mock services data with modern images
   const services: Service[] = [
     {
       id: '1',
@@ -161,8 +181,9 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800',
       price: '₹500',
       rating: 4.5,
-      location: 'City Center',
-      availability: 'Available Now'
+      location: 'Currently Only In Mumbai',
+      availability: 'Available Now',
+      laborCharges: true
     },
     {
       id: '2',
@@ -172,7 +193,7 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800',
       price: '₹2000',
       rating: 4.8,
-      location: 'Citywide',
+      location: 'Currently Only In Mumbai',
       availability: 'Book in advance'
     },
     {
@@ -183,8 +204,9 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&q=80&w=800',
       price: '₹800',
       rating: 4.3,
-      location: 'All Areas',
-      availability: 'Available 24/7'
+      location: 'Currently Only In Mumbai',
+      availability: 'Available 24/7',
+      laborCharges: true
     },
     {
       id: '4',
@@ -194,7 +216,7 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800',
       price: '₹25000',
       rating: 4.9,
-      location: 'Pan India',
+      location: 'Currently Only In Mumbai',
       availability: 'Book 3 months ahead'
     },
     {
@@ -205,8 +227,9 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800',
       price: '₹600',
       rating: 4.4,
-      location: 'Metropolitan Area',
-      availability: 'Same Day Service'
+      location: 'Currently Only In Mumbai',
+      availability: 'Same Day Service',
+      laborCharges: true
     },
     {
       id: '6',
@@ -216,10 +239,103 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
       image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800',
       price: '₹15000',
       rating: 4.7,
-      location: 'Business District',
+      location: 'Currently Only In Mumbai',
       availability: 'Flexible Booking'
+    },
+    {
+      id: '7',
+      name: 'Ganesh Chaturthi Celebration',
+      category: 'religious',
+      description: 'Complete Ganesh Chaturthi celebration arrangements including pooja, decoration, and prasad',
+      image: 'https://images.pexels.com/photos/6591154/pexels-photo-6591154.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      price: '₹15000',
+      rating: 4.9,
+      location: 'Currently Only In Mumbai',
+      availability: 'Book in advance',
+      options: {
+        decoration: {
+          available: true,
+          price: '₹5000'
+        },
+        food: {
+          available: true,
+          price: '₹7000'
+        },
+        fullArrangement: {
+          available: true,
+          price: '₹15000'
+        }
+      }
+    },
+    {
+      id: '8',
+      name: 'Satyanarayan Pooja',
+      category: 'religious',
+      description: 'Traditional Satyanarayan Pooja with all necessary items and professional pandits',
+      image: 'https://images.pexels.com/photos/5730956/pexels-photo-5730956.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      price: '₹11000',
+      rating: 4.8,
+      location: 'Currently Only In Mumbai',
+      availability: 'Available on request',
+      options: {
+        decoration: {
+          available: true,
+          price: '₹3000'
+        },
+        food: {
+          available: true,
+          price: '₹5000'
+        },
+        fullArrangement: {
+          available: true,
+          price: '₹11000'
+        }
+      }
+    },
+    {
+      id: '9',
+      name: 'Rudrabhishek',
+      category: 'religious',
+      description: 'Sacred Rudrabhishek ceremony with authentic Vedic rituals and arrangements',
+      image: 'https://images.pexels.com/photos/6591159/pexels-photo-6591159.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      price: '₹13000',
+      rating: 4.9,
+      location: 'Currently Only In Mumbai',
+      availability: 'Book 3 days ahead',
+      options: {
+        decoration: {
+          available: true,
+          price: '₹4000'
+        },
+        food: {
+          available: true,
+          price: '₹6000'
+        },
+        fullArrangement: {
+          available: true,
+          price: '₹13000'
+        }
+      }
     }
   ];
+
+  const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setUserProfile(prev => prev ? { ...prev, profileImage: base64String } : null);
+        // Save to localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const parsedData = JSON.parse(userData);
+          localStorage.setItem('user', JSON.stringify({ ...parsedData, profileImage: base64String }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const filteredServices = services.filter(service => {
     const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
@@ -385,6 +501,18 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
               >
                 Event Services
               </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSelectedCategory('religious')}
+                className={`px-4 py-2 rounded-lg transition-all duration-300 ${
+                  selectedCategory === 'religious'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Religious Events
+              </motion.button>
             </div>
           </div>
 
@@ -421,7 +549,12 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
                       <FaStar className="text-yellow-400 mr-1" />
                       <span className="text-gray-600">{service.rating}</span>
                     </div>
-                    <span className="text-blue-600 font-semibold">{service.price}</span>
+                    <div className="text-right">
+                      <span className="text-blue-600 font-semibold">{service.price}</span>
+                      {service.laborCharges && (
+                        <p className="text-xs text-gray-500">*Labor charges only</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center text-gray-500 text-sm mb-4">
                     <FaMapMarkerAlt className="mr-1" />
@@ -431,6 +564,37 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
                     <FaClock className="mr-1" />
                     <span>{service.availability}</span>
                   </div>
+                  {service.options ? (
+                    <div className="space-y-2 mb-4">
+                      {service.options.decoration?.available && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <FaPalette className="mr-2 text-purple-500" />
+                            <span>Decoration Only</span>
+                          </div>
+                          <span className="text-gray-600">{service.options.decoration.price}</span>
+                        </div>
+                      )}
+                      {service.options.food?.available && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <FaUtensils className="mr-2 text-orange-500" />
+                            <span>Food Only</span>
+                          </div>
+                          <span className="text-gray-600">{service.options.food.price}</span>
+                        </div>
+                      )}
+                      {service.options.fullArrangement?.available && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <FaPray className="mr-2 text-green-500" />
+                            <span>Full Arrangement</span>
+                          </div>
+                          <span className="text-gray-600">{service.options.fullArrangement.price}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -558,10 +722,37 @@ export default function MainPage({ initialUserProfile }: MainPageProps) {
 
                 <div className="text-center mb-6">
                   <motion.div 
-                    className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4"
+                    className="relative w-24 h-24 mx-auto mb-4"
                     whileHover={{ scale: 1.1 }}
                   >
-                    <FaUser className="text-white text-4xl" />
+                    {userProfile?.profileImage ? (
+                      <img
+                        src={userProfile.profileImage}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      
+                      <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <FaUser className="text-white text-4xl" />
+                      
+                      </div>
+                    )}
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full shadow-lg"
+                    >
+                      <FaCamera size={16} />
+                    </motion.button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleProfileImageChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
                   </motion.div>
                   <h2 className="text-2xl font-bold text-gray-900">{userProfile?.fullName}</h2>
                 </div>

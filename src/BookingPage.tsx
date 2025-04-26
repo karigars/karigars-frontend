@@ -137,6 +137,18 @@ const BookingPage: React.FC<BookingPageProps> = ({ service, onClose, onConfirm }
 
   const handleConfirmBooking = () => {
     setIsBookingConfirmed(true);
+
+    // Create a notification with the correct service details
+    const newNotification = {
+      id: Date.now().toString(),
+      title: 'Booking Confirmed',
+      message: `Your ${service.name} has been confirmed for ${selectedDate} at ${selectedTime}`,
+      time: 'Just now',
+      read: false
+    };
+    
+    window.dispatchEvent(new CustomEvent('addNotification', { detail: newNotification }));
+
     setTimeout(() => {
       onConfirm();
     }, 2000);

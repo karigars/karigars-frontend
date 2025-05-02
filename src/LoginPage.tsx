@@ -1,23 +1,34 @@
 import React, { useState, useEffect } from "react";
-import { 
-  FaUser, 
-  FaLock, 
-  FaEye, 
-  FaEyeSlash, 
-  FaGoogle, 
-  FaFacebook, 
-  FaTwitter, 
-  FaCar 
+import {
+  FaUser,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaGoogle,
+  FaFacebook,
+  FaGithub,
+  FaCar,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import ForgotPasswordPage from './ForgotPasswordPage';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { app } from "./firebase";
+import ForgotPasswordPage from "./ForgotPasswordPage";
 
 interface LoginPageProps {
   onSignUpClick: () => void;
   onLoginSuccess: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) => {
+const LoginPage: React.FC<LoginPageProps> = ({
+  onSignUpClick,
+  onLoginSuccess,
+}) => {
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
@@ -26,7 +37,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
   const [otpSent, setOtpSent] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [otp, setOtp] = useState(""); // Added state for OTP input
 
+  const auth = getAuth(app);
   useEffect(() => {
     if (validationMessage) {
       const timer = setTimeout(() => setValidationMessage(""), 3000);
@@ -37,13 +50,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
   const validateLoginIdentifier = (identifier: string) => {
     if (loginMethod === "otp") {
       if (!/^(\+91)\d{10}$/.test(identifier)) {
-        setValidationMessage("Please enter a valid mobile number (+91XXXXXXXXXX)");
+        setValidationMessage(
+          "Please enter a valid mobile number (+91XXXXXXXXXX)"
+        );
         return false;
       }
     } else {
       if (identifier.startsWith("+91")) {
         if (!/^(\+91)\d{10}$/.test(identifier)) {
-          setValidationMessage("Please enter a valid mobile number (+91XXXXXXXXXX)");
+          setValidationMessage(
+            "Please enter a valid mobile number (+91XXXXXXXXXX)"
+          );
           return false;
         }
       } else {
@@ -69,29 +86,93 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
     }
 
     setSubmitted(true);
-    
+
     // Create mock user data for demonstration
     const mockUserData = {
       fullName: "Demo User",
-      email: loginIdentifier.includes("@") ? loginIdentifier : "demo@example.com",
-      mobile: loginIdentifier.startsWith("+91") ? loginIdentifier : "+911234567890"
+      email: loginIdentifier.includes("@")
+        ? loginIdentifier
+        : "demo@example.com",
+      mobile: loginIdentifier.startsWith("+91")
+        ? loginIdentifier
+        : "+911234567890",
     };
 
     // Store user data in localStorage
-    localStorage.setItem('user', JSON.stringify(mockUserData));
-    
+    localStorage.setItem("user", JSON.stringify(mockUserData));
+
     // Call the onLoginSuccess callback
     onLoginSuccess();
   };
 
   const handleSendOtp = () => {
     if (!/^(\+91)\d{10}$/.test(loginIdentifier)) {
-      setValidationMessage("Please enter a valid mobile number (+91XXXXXXXXXX)");
+      setValidationMessage(
+        "Please enter a valid mobile number (+91XXXXXXXXXX)"
+      );
       return;
     }
     setOtpSent(true);
   };
+  // --- Social Sign-In Handlers (Copied from SignUpPage) ---
 
+  // Generic function to handle social sign-in popup
+  const handleSocialSignIn = async (provider: any) => {
+    provider.setCustomParameters({ prompt: "select_account" });
+    try {
+      const firebaseResponse = await signInWithPopup(auth, provider);
+      const userDetails = {
+        fullName: firebaseResponse.user.displayName,
+        email: firebaseResponse.user.email,
+        profilePhotoUrl: firebaseResponse.user.photoURL,
+        providerId: firebaseResponse.providerId,
+      };
+
+      // Save user details in localStorage
+      localStorage.setItem("user", JSON.stringify(userDetails));
+
+      // Directly call login success callback
+      onLoginSuccess();
+    } catch (error: any) {
+      console.error("Social Sign-In Error:", error);
+      let displayError = `Sign-in failed: ${
+        error.message || "Please try again."
+      }`;
+      if (error.code === "auth/account-exists-with-different-credential") {
+        displayError =
+          "An account already exists with the same email address but different sign-in credentials. Try signing in with the original provider or use password/OTP.";
+      } else if (error.code === "auth/popup-closed-by-user") {
+        displayError = "Sign-in cancelled.";
+      }
+      setValidationMessage(displayError); // Use validationMessage state for errors
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+      } else if (error.request) {
+        console.error("Error request:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+        console.error("Error code:", error.code);
+      }
+    }
+  };
+
+  // Google Sign-In Handler
+  const handleGoogleClick = () => {
+    const provider = new GoogleAuthProvider();
+    handleSocialSignIn(provider);
+  };
+
+  // Facebook Sign-In Handler
+  const handleFacebookClick = () => {
+    const provider = new FacebookAuthProvider();
+    handleSocialSignIn(provider);
+  };
+
+  // GitHub Sign-In Handler
+  const handleGithubClick = () => {
+    const provider = new GithubAuthProvider();
+    handleSocialSignIn(provider);
+  };
   if (showForgotPassword) {
     return <ForgotPasswordPage onBack={() => setShowForgotPassword(false)} />;
   }
@@ -112,7 +193,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
         >
           THE KARIGAR STOP
         </motion.h1>
-        <h2 className="text-xl font-semibold text-gray-600 mb-6">Welcome Back</h2>
+        <h2 className="text-xl font-semibold text-gray-600 mb-6">
+          Welcome Back
+        </h2>
         <form onSubmit={handleLogin}>
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -140,15 +223,26 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
           <div className="flex justify-center mb-4">
             <button
               type="button"
-              onClick={() => { setLoginMethod("password"); setOtpSent(false); }}
-              className={`mx-2 font-semibold ${loginMethod === "password" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"}`}
+              onClick={() => {
+                setLoginMethod("password");
+                setOtpSent(false);
+              }}
+              className={`mx-2 font-semibold ${
+                loginMethod === "password"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500"
+              }`}
             >
               Password Login
             </button>
             <button
               type="button"
               onClick={() => setLoginMethod("otp")}
-              className={`mx-2 font-semibold ${loginMethod === "otp" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"}`}
+              className={`mx-2 font-semibold ${
+                loginMethod === "otp"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500"
+              }`}
             >
               OTP Login
             </button>
@@ -233,7 +327,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
                     className="w-full pl-4 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 shadow-md"
                   />
                   <div className="text-right mt-2">
-                    <a href="#" className="text-green-600 hover:underline" onClick={() => setOtpSent(false)}>
+                    <a
+                      href="#"
+                      className="text-green-600 hover:underline"
+                      onClick={() => setOtpSent(false)}
+                    >
                       Resend OTP
                     </a>
                   </div>
@@ -243,8 +341,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
           )}
 
           <div className="flex items-center mb-4">
-            <motion.input whileHover={{ scale: 1.1 }} type="checkbox" id="remember" className="mr-2" />
-            <label htmlFor="remember" className="text-gray-600">Remember Me</label>
+            <motion.input
+              whileHover={{ scale: 1.1 }}
+              type="checkbox"
+              id="remember"
+              className="mr-2"
+            />
+            <label htmlFor="remember" className="text-gray-600">
+              Remember Me
+            </label>
           </div>
 
           <motion.button
@@ -258,19 +363,37 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignUpClick, onLoginSuccess }) 
 
           <p className="text-gray-600 mt-4">Or continue with</p>
           <div className="flex justify-center gap-4 mt-3">
-            <motion.button whileHover={{ scale: 1.1 }} className="bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600">
+            <motion.button
+              onClick={handleGoogleClick}
+              whileHover={{ scale: 1.1 }}
+              className="bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600"
+            >
               <FaGoogle />
             </motion.button>
-            <motion.button whileHover={{ scale: 1.1 }} className="bg-blue-700 text-white p-3 rounded-full shadow-lg hover:bg-blue-800">
+            <motion.button
+              onClick={handleFacebookClick}
+              whileHover={{ scale: 1.1 }}
+              className="bg-blue-700 text-white p-3 rounded-full shadow-lg hover:bg-blue-800"
+            >
               <FaFacebook />
             </motion.button>
-            <motion.button whileHover={{ scale: 1.1 }} className="bg-blue-400 text-white p-3 rounded-full shadow-lg hover:bg-blue-500">
-              <FaTwitter />
+            <motion.button
+              onClick={handleGithubClick}
+              whileHover={{ scale: 1.1 }}
+              className="bg-blue-400 text-white p-3 rounded-full shadow-lg hover:bg-blue-500"
+            >
+              <FaGithub />
             </motion.button>
           </div>
         </form>
         <p className="text-gray-600 mt-4">
-          Don't have an account? <button onClick={onSignUpClick} className="text-blue-600 hover:underline">Sign up</button>
+          Don't have an account?{" "}
+          <button
+            onClick={onSignUpClick}
+            className="text-blue-600 hover:underline"
+          >
+            Sign up
+          </button>
         </p>
       </motion.div>
 

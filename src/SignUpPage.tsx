@@ -1,36 +1,114 @@
 import React, { useState, useEffect } from "react";
-import { 
-  FaUser, 
-  FaLock, 
-  FaEye, 
-  FaEyeSlash, 
-  FaEnvelope, 
+import {
+  FaUser,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaEnvelope,
   FaPhone,
-  FaGoogle, 
-  FaFacebook, 
-  FaTwitter,
-  FaCheck
+  FaGoogle,
+  FaFacebook,
+  FaGithub,
+  FaCheck,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-
+import {
+  getAuth,
+  GoogleAuthProvider,
+  FacebookAuthProvider, // Import Facebook provider
+  GithubAuthProvider, // Import Twitter provider
+  signInWithPopup,
+} from "firebase/auth";
 interface SignUpPageProps {
   onLoginClick: () => void;
 }
-
+import { app } from "./firebase";
 const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     mobile: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | ''>('');
+  const [passwordStrength, setPasswordStrength] = useState<
+    "weak" | "medium" | "strong" | ""
+  >("");
+  // --- Social Sign-In Handlers ---
+  const auth = getAuth(app);
+  // Generic function to handle social sign-in popup
+  const handleSocialSignIn = async (provider: any) => {
+    // Use 'any' for provider type flexibility or define a more specific type
+    // Set custom parameters for the popup, prompting account selection
+    provider.setCustomParameters({ prompt: "select_account" });
+    try {
+      // Initiate the sign-in process with the specified provider
+      const firebaseResponse = await signInWithPopup(auth, provider);
 
+      // Extract user details from the response
+      const userDetails = {
+        fullName: firebaseResponse.user.displayName,
+        email: firebaseResponse.user.email,
+        profilePhotoUrl: firebaseResponse.user.photoURL,
+        // Add other details as needed, e.g., provider ID
+        providerId: firebaseResponse.providerId,
+      };
+
+      // Save user details in localStorage
+      localStorage.setItem("user", JSON.stringify(userDetails));
+
+      // Set submitted state to trigger success animation (optional)
+      setSubmitted(true);
+
+      // Redirect to the homepage after a short delay
+      setTimeout(() => {
+        window.location.href = "/"; // Or your desired redirect path
+      }, 1000);
+    } catch (error: any) {
+      // Catch and log any errors during authentication
+      console.error("Social Sign-In Error:", error);
+      // Display a user-friendly error message
+      setErrorMessage(
+        `Sign-in failed: ${error.message || "Please try again."}`
+      );
+      // Log detailed error information for debugging
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+        console.error("Error response headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("Error request:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+      }
+    }
+  };
+
+  // Google Sign-In Handler
+  const handleGoogleClick = () => {
+    const provider = new GoogleAuthProvider();
+    handleSocialSignIn(provider);
+  };
+
+  // Facebook Sign-In Handler
+  const handleFacebookClick = () => {
+    const provider = new FacebookAuthProvider();
+    // Add required scopes if needed, e.g., 'email', 'public_profile'
+    // provider.addScope('email');
+    handleSocialSignIn(provider);
+  };
+
+  // Twitter Sign-In Handler
+  const handleGithubClick = () => {
+    const provider = new GithubAuthProvider();
+    // Add required scopes if needed, e.g., 'user:email'
+    // provider.addScope('user:email');
+    handleSocialSignIn(provider);
+  };
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => setErrorMessage(""), 3000);
@@ -42,13 +120,17 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
     // Check password strength
     const { password } = formData;
     if (password.length === 0) {
-      setPasswordStrength('');
+      setPasswordStrength("");
     } else if (password.length < 8) {
-      setPasswordStrength('weak');
-    } else if (/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
-      setPasswordStrength('strong');
+      setPasswordStrength("weak");
+    } else if (
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+        password
+      )
+    ) {
+      setPasswordStrength("strong");
     } else {
-      setPasswordStrength('medium');
+      setPasswordStrength("medium");
     }
   }, [formData.password]);
 
@@ -90,14 +172,17 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
     if (validateForm()) {
       setSubmitted(true);
       // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify({
-        fullName: formData.fullName,
-        email: formData.email,
-        mobile: formData.mobile
-      }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          mobile: formData.mobile,
+        })
+      );
       // Redirect to main page after 1 second
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = "/";
       }, 1000);
     }
   };
@@ -105,7 +190,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let processedValue = value;
-    
+
     if (name === "mobile") {
       if (!value.startsWith("+91")) {
         processedValue = "+91" + value.replace("+91", "");
@@ -115,9 +200,9 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
       }
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: processedValue
+      [name]: processedValue,
     }));
   };
 
@@ -137,7 +222,9 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
         >
           THE KARIGAR STOP
         </motion.h1>
-        <h2 className="text-xl font-semibold text-gray-600 mb-6">Create Account</h2>
+        <h2 className="text-xl font-semibold text-gray-600 mb-6">
+          Create Account
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <motion.div
@@ -215,12 +302,16 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
             </button>
             {passwordStrength && (
               <div className="mt-1 text-sm">
-                Password strength: 
-                <span className={`ml-1 font-semibold ${
-                  passwordStrength === 'weak' ? 'text-red-500' :
-                  passwordStrength === 'medium' ? 'text-yellow-500' :
-                  'text-green-500'
-                }`}>
+                Password strength:
+                <span
+                  className={`ml-1 font-semibold ${
+                    passwordStrength === "weak"
+                      ? "text-red-500"
+                      : passwordStrength === "medium"
+                      ? "text-yellow-500"
+                      : "text-green-500"
+                  }`}
+                >
                   {passwordStrength}
                 </span>
               </div>
@@ -241,9 +332,10 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
               value={formData.confirmPassword}
               onChange={handleInputChange}
               className={`w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md ${
-                formData.confirmPassword && formData.password !== formData.confirmPassword
-                  ? 'border-red-500'
-                  : ''
+                formData.confirmPassword &&
+                formData.password !== formData.confirmPassword
+                  ? "border-red-500"
+                  : ""
               }`}
             />
             <button
@@ -253,11 +345,12 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
             >
               {confirmPasswordVisible ? <FaEyeSlash /> : <FaEye />}
             </button>
-            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-              <div className="mt-1 text-sm text-red-500">
-                Passwords do not match
-              </div>
-            )}
+            {formData.confirmPassword &&
+              formData.password !== formData.confirmPassword && (
+                <div className="mt-1 text-sm text-red-500">
+                  Passwords do not match
+                </div>
+              )}
           </motion.div>
 
           <motion.button
@@ -273,28 +366,34 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onLoginClick }) => {
         <p className="text-gray-600 mt-4">Or sign up with</p>
         <div className="flex justify-center gap-4 mt-3">
           <motion.button
+            onClick={handleGoogleClick}
             whileHover={{ scale: 1.1 }}
             className="bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600"
           >
             <FaGoogle />
           </motion.button>
           <motion.button
+            onClick={handleFacebookClick}
             whileHover={{ scale: 1.1 }}
             className="bg-blue-700 text-white p-3 rounded-full shadow-lg hover:bg-blue-800"
           >
             <FaFacebook />
           </motion.button>
           <motion.button
+            onClick={handleGithubClick}
             whileHover={{ scale: 1.1 }}
             className="bg-blue-400 text-white p-3 rounded-full shadow-lg hover:bg-blue-500"
           >
-            <FaTwitter />
+            <FaGithub />
           </motion.button>
         </div>
 
         <p className="text-gray-600 mt-4">
           Already have an account?{" "}
-          <button onClick={onLoginClick} className="text-blue-600 hover:underline">
+          <button
+            onClick={onLoginClick}
+            className="text-blue-600 hover:underline"
+          >
             Login
           </button>
         </p>
